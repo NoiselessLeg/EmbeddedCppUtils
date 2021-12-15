@@ -1,11 +1,37 @@
+// Copyright(c) 2020 John Lewis
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #pragma once
+#include <array>
 #include <cassert>
 #include <iterator>
 #include <memory>
 #include <stdexcept>
 
+#include "ntl_defines.h"
+#include "ntl_exception.h"
+
 namespace ntl
 {
+
+
    template <typename T, std::size_t MaxElems, typename Allocator = std::allocator<T>>
    class bounded_vector
    {
@@ -18,6 +44,7 @@ namespace ntl
       using const_reference = const value_type&;
       using pointer = typename std::allocator_traits<allocator_type>::pointer;
       using const_pointer = typename std::allocator_traits<allocator_type>::const_pointer;
+      using storage_type = std::aligned_storage_t<sizeof(T), alignof(T)>;
 
       class iterator
       {
@@ -340,310 +367,10 @@ namespace ntl
          pointer m_Ptr;
       };
 
-      class reverse_iterator
-      {
-      public:
-         using iterator_category = std::random_access_iterator_tag;
-         using value_type = T;
-         using difference_type = typename bounded_vector::difference_type;
-         using pointer = typename bounded_vector::pointer;
-         using reference = typename bounded_vector::reference;
+      using reverse_iterator = std::reverse_iterator<iterator>;
+      using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-         reverse_iterator() :
-            m_Ptr(nullptr)
-         {
-         }
-
-         reverse_iterator(pointer ptr) :
-            m_Ptr(ptr)
-         {
-         }
-
-         reverse_iterator(const reverse_iterator& rhs) = default;
-         reverse_iterator(reverse_iterator&& rhs) = default;
-
-         reference operator *()
-         {
-            return *m_Ptr;
-         }
-
-         pointer operator ->()
-         {
-            return m_Ptr;
-         }
-
-         const_reference operator *() const
-         {
-            return *m_Ptr;
-         }
-
-         const_pointer operator ->() const
-         {
-            return m_Ptr;
-         }
-
-         template <typename Other>
-         bool operator == (const Other& rhs) const
-         {
-            return m_Ptr == rhs.m_Ptr;
-         }
-
-         template <typename Other>
-         bool operator != (const Other& rhs) const
-         {
-            return !(*this == rhs);
-         }
-
-         template <typename Other>
-         bool operator > (const Other& rhs) const
-         {
-            return m_Ptr < rhs.m_Ptr;
-         }
-
-         template <typename Other>
-         bool operator >= (const Other& rhs) const
-         {
-            return (*this > rhs) || (*this == rhs);
-         }
-
-         template <typename Other>
-         bool operator < (const Other& rhs) const
-         {
-            return m_Ptr > rhs.m_Ptr;
-         }
-
-         template <typename Other>
-         bool operator <= (const Other& rhs) const
-         {
-            return (*this < rhs) || (*this == rhs);
-         }
-
-         reverse_iterator& operator ++()
-         {
-            --m_Ptr;
-            return *this;
-         }
-
-         reverse_iterator operator++(int unused)
-         {
-            reverse_iterator i = *this;
-            --m_Ptr;
-            return i;
-         }
-
-         reverse_iterator& operator --()
-         {
-            ++m_Ptr;
-            return *this;
-         }
-
-         reverse_iterator operator--(int unused)
-         {
-            reverse_iterator i = *this;
-            ++m_Ptr;
-            return i;
-         }
-
-         reverse_iterator& operator += (difference_type n)
-         {
-            m_Ptr -= n;
-            return *this;
-         }
-
-         reverse_iterator operator + (difference_type n) const
-         {
-            reverse_iterator newItr(m_Ptr - n);
-            return newItr;
-         }
-
-         reverse_iterator& operator -= (difference_type n)
-         {
-            m_Ptr += n;
-            return *this;
-         }
-
-         reverse_iterator operator - (difference_type n) const
-         {
-            reverse_iterator ret(m_Ptr + n);
-            return ret;
-         }
-
-         difference_type operator - (const reverse_iterator& rhs) const
-         {
-            return m_Ptr + rhs.m_Ptr;
-         }
-
-         reference operator [](size_type n)
-         {
-            return *(m_Ptr - n);
-         }
-
-         const_reference operator [](size_type n) const
-         {
-            return *(m_Ptr - n);
-         }
-
-
-      private:
-         friend class const_reverse_iterator;
-         pointer m_Ptr;
-      };
-
-      class const_reverse_iterator
-      {
-      public:
-         using iterator_category = std::random_access_iterator_tag;
-         using value_type = T;
-         using difference_type = typename bounded_vector::difference_type;
-         using pointer = typename bounded_vector::const_pointer;
-         using reference = typename bounded_vector::const_reference;
-
-         const_reverse_iterator() :
-            m_Ptr(nullptr)
-         {
-         }
-
-         const_reverse_iterator(pointer ptr) :
-            m_Ptr(ptr)
-         {
-         }
-
-         const_reverse_iterator(const const_reverse_iterator& rhs) = default;
-         const_reverse_iterator(const_reverse_iterator&& rhs) = default;
-
-         const_reverse_iterator(const reverse_iterator& rhs) :
-            m_Ptr(rhs.m_Ptr)
-         {
-         }
-
-         const_reverse_iterator& operator = (const reverse_iterator& rhs)
-         {
-            m_Ptr = rhs.m_Ptr;
-            return *this;
-         }
-
-         const_reverse_iterator(reverse_iterator && rhs) :
-            m_Ptr(std::move(rhs.m_Ptr))
-         {
-         }
-
-         const_reverse_iterator& operator = (reverse_iterator&& rhs)
-         {
-            m_Ptr = std::move(rhs.m_Ptr);
-            return *this;
-         }
-
-         const_reference operator *() const
-         {
-            return *m_Ptr;
-         }
-
-         const_pointer operator ->() const
-         {
-            return m_Ptr;
-         }
-
-         template <typename Other>
-         bool operator == (const Other& rhs) const
-         {
-            return m_Ptr == rhs.m_Ptr;
-         }
-
-         template <typename Other>
-         bool operator != (const Other& rhs) const
-         {
-            return !(*this == rhs);
-         }
-
-         template <typename Other>
-         bool operator > (const Other& rhs) const
-         {
-            return m_Ptr < rhs.m_Ptr;
-         }
-
-         template <typename Other>
-         bool operator >= (const Other& rhs) const
-         {
-            return (*this > rhs) || (*this == rhs);
-         }
-
-         template <typename Other>
-         bool operator < (const Other& rhs) const
-         {
-            return m_Ptr > rhs.m_Ptr;
-         }
-
-         template <typename Other>
-         bool operator <= (const Other& rhs) const
-         {
-            return (*this < rhs) || (*this == rhs);
-         }
-
-         const_reverse_iterator& operator ++()
-         {
-            --m_Ptr;
-            return *this;
-         }
-
-         const_reverse_iterator operator++(int unused)
-         {
-            const_reverse_iterator i = *this;
-            --m_Ptr;
-            return i;
-         }
-
-         const_reverse_iterator& operator --()
-         {
-            ++m_Ptr;
-            return *this;
-         }
-
-         const_reverse_iterator operator--(int unused)
-         {
-            const_reverse_iterator i = *this;
-            ++m_Ptr;
-            return i;
-         }
-
-         const_reverse_iterator& operator += (difference_type n)
-         {
-            m_Ptr -= n;
-            return *this;
-         }
-
-         const_reverse_iterator operator + (difference_type n) const
-         {
-            const_reverse_iterator newItr(m_Ptr - n);
-            return newItr;
-         }
-
-         const_reverse_iterator& operator -= (difference_type n)
-         {
-            m_Ptr += n;
-            return *this;
-         }
-
-         const_reverse_iterator operator - (difference_type n) const
-         {
-            const_reverse_iterator ret(m_Ptr + n);
-            return ret;
-         }
-
-         difference_type operator - (const const_reverse_iterator& rhs) const
-         {
-            return m_Ptr + rhs.m_Ptr;
-         }
-
-         const_reference operator [](size_type n) const
-         {
-            return *(m_Ptr - n);
-         }
-      private:
-         friend class reverse_iterator;
-         pointer m_Ptr;
-      };
-
-      bounded_vector() noexcept:
+      bounded_vector() noexcept :
          m_LastElem(get_element_as_pointer(0))
       {
       }
@@ -671,6 +398,16 @@ namespace ntl
          m_Elems = std::move(rhs.m_Elems);
       }
 
+      bounded_vector(std::initializer_list<T> list) :
+         m_LastElem(get_element_as_pointer(0))
+      {
+         assert(list.size() <= capacity());
+         for (const auto& elem : list)
+         {
+            push_back(elem);
+         }
+      }
+
       bounded_vector& operator = (const bounded_vector& rhs) noexcept
       {
          if (this != &rhs)
@@ -693,6 +430,18 @@ namespace ntl
             }
 
             m_Elems = std::move(rhs.m_Elems);
+         }
+
+         return *this;
+      }
+
+      bounded_vector& operator =(std::initializer_list<T> list)
+      {
+         assert(list.size() <= capacity());
+         reset();
+         for (const auto& elem : list)
+         {
+            push_back(elem);
          }
 
          return *this;
@@ -775,7 +524,7 @@ namespace ntl
       {
          if (pos > size())
          {
-            throw std::out_of_range();
+            NTL_THROW(std::out_of_range);
          }
 
          return *get_element_as_pointer(pos);
@@ -785,7 +534,7 @@ namespace ntl
       {
          if (pos > size())
          {
-            throw std::out_of_range();
+            NTL_THROW(std::out_of_range);
          }
 
          return *get_element_as_pointer(pos);
@@ -801,7 +550,7 @@ namespace ntl
          return *get_element_as_pointer(pos);
       }
 
-      void clear() noexcept
+      void clear()
       {
          reset();
       }
@@ -811,12 +560,22 @@ namespace ntl
          return MaxElems;
       }
 
+      T* data() noexcept
+      {
+         return get_element_as_pointer(0);
+      }
+
+      const T* data() const noexcept
+      {
+         return get_element_as_pointer(0);
+      }
+
       constexpr size_type max_size() const noexcept
       {
          return capacity();
       }
 
-      allocator_type get_allocator() const noexcept
+      constexpr allocator_type get_allocator() const noexcept
       {
          return m_Alloc;
       }
@@ -838,7 +597,7 @@ namespace ntl
          return *elem;
       }
 
-      const_reference back() const
+      const_reference back() const noexcept
       {
          pointer elem = m_LastElem;
          --elem;
@@ -854,12 +613,12 @@ namespace ntl
       {
          if (size() < capacity())
          {
-            *m_LastElem = elem;
+            std::allocator_traits<allocator_type>::construct(m_Alloc, &(*m_LastElem), elem);
             ++m_LastElem;
          }
          else
          {
-            throw std::runtime_error("No space available to push_back");
+            NTL_THROW(ntl::out_of_space, "No space available to push_back");
          }
       }
 
@@ -867,12 +626,12 @@ namespace ntl
       {
          if (size() < capacity())
          {
-            *m_LastElem = std::move(elem);
+            std::allocator_traits<allocator_type>::construct(m_Alloc, &(*m_LastElem), std::move(elem));
             ++m_LastElem;
          }
          else
          {
-            throw std::runtime_error("No space available to push_back");
+            NTL_THROW(ntl::out_of_space, "No space available to push_back");
          }
       }
 
@@ -886,14 +645,17 @@ namespace ntl
          }
          else
          {
-            throw std::runtime_error("No space available to emplace_back");
+            NTL_THROW(ntl::out_of_space, "No space available to emplace_back");
          }
       }
 
       void pop_back()
       {
-         --m_LastElem;
-         std::allocator_traits<allocator_type>::destroy(m_Alloc, m_LastElem);
+         if (end() > begin())
+         {
+            --m_LastElem;
+            std::allocator_traits<allocator_type>::destroy(m_Alloc, m_LastElem);
+         }
       }
 
       bool empty() const noexcept
@@ -905,25 +667,27 @@ namespace ntl
       {
          if (size() < capacity())
          {
-            iterator currLastElem = end();
-            iterator next = end();
-            --next;
+            iterator mutable_pos = to_mutable_iterator(pos);
 
-            while (next != pos)
+            iterator ltmp = end();
+            iterator rtmp = end();
+            --ltmp;
+
+            while (ltmp >= pos)
             {
-               std::swap(currLastElem, next);
-               --currLastElem;
-               --next;
+               std::iter_swap(ltmp, rtmp);
+               --ltmp;
+               --rtmp;
             }
 
             ++m_LastElem;
+            std::allocator_traits<allocator_type>::construct(m_Alloc, &(*mutable_pos), value);
 
-            *next = value;
-            return next;
+            return mutable_pos;
          }
          else
          {
-            throw std::runtime_error("No space available to insert");
+            NTL_THROW(ntl::out_of_space, "No space available to insert");
          }
       }
 
@@ -931,25 +695,27 @@ namespace ntl
       {
          if (size() < capacity())
          {
-            iterator currLastElem = end();
-            iterator next = end();
-            --next;
+            iterator mutable_pos = to_mutable_iterator(pos);
 
-            while (next != pos)
+            iterator ltmp = end();
+            iterator rtmp = end();
+            --ltmp;
+
+            while (ltmp >= pos)
             {
-               std::swap(currLastElem, next);
-               --currLastElem;
-               --next;
+               std::iter_swap(ltmp, rtmp);
+               --ltmp;
+               --rtmp;
             }
 
             ++m_LastElem;
+            std::allocator_traits<allocator_type>::construct(m_Alloc, &(*mutable_pos), std::move(value));
 
-            *next = std::move(value);
-            return next;
+            return mutable_pos;
          }
          else
          {
-            throw std::runtime_error("No space available to insert");
+            NTL_THROW(ntl::out_of_space, "No space available to insert");
          }
       }
 
@@ -958,49 +724,49 @@ namespace ntl
       {
          if (size() < capacity())
          {
-            iterator currLastElem = end();
-            iterator next = end();
-            --next;
+            iterator mutable_pos = to_mutable_iterator(pos);
 
-            while (next != pos)
+            iterator ltmp = end();
+            iterator rtmp = end();
+            --ltmp;
+
+            while (ltmp >= pos)
             {
-               std::iter_swap(currLastElem, next);
-               --currLastElem;
-               --next;
+               std::iter_swap(ltmp, rtmp);
+               --ltmp;
+               --rtmp;
             }
 
-            std::iter_swap(currLastElem, next);
             ++m_LastElem;
+            std::allocator_traits<allocator_type>::construct(m_Alloc, &(*mutable_pos), std::forward<Args>(args)...);
 
-            std::allocator_traits<allocator_type>::construct(m_Alloc, &(*next), std::forward<Args>(args)...);
-            return next;
+            return mutable_pos;
          }
          else
          {
-            throw std::runtime_error("No space available to insert");
+            NTL_THROW(ntl::out_of_space, "No space available to insert");
          }
       }
 
       iterator erase(const_iterator pos)
       {
-         assert(pos != end());
+         assert(pos < end());
 
-         const_iterator target = pos;
-
-         T* elem = &(const_cast<T&>(*target));
-         iterator mutableTarget(elem);
-         iterator next(mutableTarget);
+         iterator mutable_target = to_mutable_iterator(pos);
+         iterator next(mutable_target);
          iterator ret = next;
          ++next;
 
-         while (next != end())
+         // swap the element into the last position, then
+         // pop the container back.
+         const_iterator last = end();
+         while (next != last)
          {
-            std::iter_swap(mutableTarget, next);
-            ++mutableTarget;
+            std::iter_swap(mutable_target, next);
+            ++mutable_target;
             ++next;
          }
 
-         std::iter_swap(mutableTarget, next);
          pop_back();
 
          return ret;
@@ -1008,23 +774,22 @@ namespace ntl
 
       iterator erase(const_iterator first, const_iterator last)
       {
-         iterator ret = last;
-         if (first != last)
-         {
-            assert(first != end());
-            assert(last != end());
+         assert(first <= last);
+         iterator mutable_first = to_mutable_iterator(first);
+         iterator mutable_last = to_mutable_iterator(last);
+         iterator ret = mutable_first;
 
-            auto numElemsInRange = std::distance(first, last);
-            iterator next = last;
-            ++next;
-            while (next != end())
+         if ((last - first) > 0)
+         {
+            // first, shift all the elements in the range to the end
+            while (mutable_last != end())
             {
-               std::iter_swap(first, next);
-               ++first;
-               ++next;
+               std::iter_swap(mutable_first, mutable_last);
+               ++mutable_last;
+               ++mutable_first;
             }
 
-            for (auto i = 0; i < numElemsInRange; ++i)
+            while (end() != mutable_first)
             {
                pop_back();
             }
@@ -1068,6 +833,7 @@ namespace ntl
       }
 
    private:
+
       pointer get_element_as_pointer(std::size_t idx) noexcept
       {
          return reinterpret_cast<pointer>(&m_Elems[idx]);
@@ -1086,9 +852,15 @@ namespace ntl
          }
       }
 
+      constexpr iterator to_mutable_iterator(const_iterator itr) noexcept
+      {
+         iterator beginItr = begin();
+         return beginItr + (itr - beginItr);
+      }
+
       allocator_type m_Alloc;
       pointer m_LastElem;
 
-      std::aligned_storage_t<sizeof(T), alignof(T)> m_Elems[MaxElems];
+      std::array<storage_type, MaxElems> m_Elems;
    };
 }
